@@ -1,45 +1,48 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
+ * Hanuman Chalisa & Bhakti
+ *
+ * Provider order matters:
+ *   Theme → UpdateGate (force-update check) → Library (persisted prefs and data) → Player (needs prefs) → Navigator
  *
  * @format
  */
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AppUpdateGate from './src/components/AppUpdateGate';
+import { PlayerProvider } from './src/audio/PlayerProvider';
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { LibraryProvider, useLibrary } from './src/state/LibraryProvider';
+import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+function Gate({ children }: { children: React.ReactNode }) {
+  const { ready, colors } = useTheme();
+  const { loaded } = useLibrary();
+  // Wait for persisted theme and library (a few ms) so there is no flash of the wrong theme.
+  if (!ready || !loaded) {
+    return <View style={[styles.flex, { backgroundColor: colors.background }]} />;
+  }
+  return <>{children}</>;
+}
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <ThemeProvider>
+        <AppUpdateGate>
+          <LibraryProvider>
+            <Gate>
+              <PlayerProvider>
+                <AppNavigator />
+              </PlayerProvider>
+            </Gate>
+          </LibraryProvider>
+        </AppUpdateGate>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+const styles = StyleSheet.create({ flex: { flex: 1 } });
 
 export default App;
